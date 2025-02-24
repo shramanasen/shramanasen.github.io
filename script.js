@@ -1,7 +1,7 @@
 const imageUpload = document.getElementById("imageUpload");
 const analyzeBtn = document.getElementById("analyzeBtn");
 const canvas = document.getElementById("imageCanvas");
-const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d", { willReadFrequently: true }); // ✅ Fix: Optimize canvas for frequent reads
 const analysisResult = document.getElementById("analysisResult");
 
 let img = new Image();
@@ -111,9 +111,15 @@ function analyzeFaces() {
         }
     }
 
-    analysisResult.textContent += facesAligned ? " Faces are well positioned!" : " Faces are not well aligned.";
+    analysisResult.textContent += facesAligned 
+        ? " Faces are well positioned!" 
+        : " Faces are not well aligned.";
 
-    src.delete(); gray.delete(); faces.delete();
+    // ✅ Free memory
+    src.delete();
+    gray.delete();
+    faces.delete();
+    faceCascade.delete();  // ✅ Fix: Free face detection model memory
 }
 
 // ** Helper Function: Check if Points Align with Rule of Thirds **
@@ -126,3 +132,7 @@ function checkAlignment(points) {
         thirdsY.some(y => Math.abs(point.y - y) < 20)
     );
 }
+
+
+
+
