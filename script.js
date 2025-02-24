@@ -62,14 +62,19 @@ analyzeBtn.addEventListener("click", function() {
 
 // ** 1. Detect Bright Spots **
 function analyzeBrightSpots() {
+    const canvas = document.getElementById("imageCanvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true }); // Optimize performance
+
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
     
     let brightSpots = [];
-    
+
     for (let i = 0; i < data.length; i += 4) {
-        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        if (brightness > 200) { // Threshold for bright areas
+        // Improved perceived brightness formula
+        const brightness = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+
+        if (brightness > 200) { // High brightness threshold
             const x = (i / 4) % canvas.width;
             const y = Math.floor((i / 4) / canvas.width);
             brightSpots.push({ x, y });
@@ -77,8 +82,11 @@ function analyzeBrightSpots() {
     }
 
     const aligned = checkAlignment(brightSpots);
-    analysisResult.textContent = aligned ? "Bright areas align with rule of thirds!" : "Bright areas do not align well.";
+    analysisResult.textContent = aligned 
+        ? "Bright areas align with rule of thirds!" 
+        : "Bright areas do not align well.";
 }
+
 
 // ** 2. Face Detection with OpenCV.js **
 function analyzeFaces() {
