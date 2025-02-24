@@ -88,39 +88,61 @@ function analyzeBrightSpots() {
 }
 
 
-// ** 2. Face Detection with OpenCV.js **
-function analyzeFaces() {
-    const src = cv.imread(canvas);
-    const gray = new cv.Mat();
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-
-    const faceCascade = new cv.CascadeClassifier();
-    faceCascade.load('haarcascade_frontalface_default.xml');
-
-    const faces = new cv.RectVector();
-    const size = new cv.Size(30, 30);
-    
-    faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, size, size);
-    
-    let facesAligned = false;
-    for (let i = 0; i < faces.size(); i++) {
-        let rect = faces.get(i);
-        if (checkAlignment([{ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }])) {
-            facesAligned = true;
-            break;
-        }
+function analyzeFaces(imageData) {
+    try {
+      // 1. Convert the image data to a cv.Mat object.
+      let src = cv.matFromImageData(imageData);
+  
+      // 2. Convert the image to grayscale.
+      let gray = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+  
+      // 3. Check if the grayscale image is empty
+      if (gray.empty()) {
+        throw new Error("Grayscale image is empty."); // throw custom error
+      }
+  
+      // 4. Check if the image size is valid.
+      if (gray.cols <= 0 || gray.rows <= 0) {
+        throw new Error(`Invalid image dimensions: ${gray.cols} x ${gray.rows}`); // throw custom error
+      }
+  
+      // 5. Create the cascade classifier.
+      let faceCascade = new cv.CascadeClassifier();
+      // Use the pre-trained frontal face cascade classifier.
+      let utils = new Utils('errorMessage');
+      let cascadeFile = 'haarcascade_frontalface_default.xml'; // path to cascade xml
+      utils.createFileFromUrl(cascadeFile, cascadeFile, () => {
+        faceCascade.load(cascadeFile); // load face cascade
+      });
+  
+      // 6. Detect faces in the image.
+      let faces = new cv.RectVector();
+      let msize = new cv.Size(0, 0);
+      faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, msize, msize);
+  
+      // 7. Loop through faces and draw rectangles around them.
+      for (let i = 0; i < faces.size(); ++i) {
+        let roi = faces.get(i);
+        let point1 = new cv.Point(roi.x, roi.y);
+        let point2 = new cv.Point(roi.x + roi.width, roi.y + roi.height);
+        cv.rectangle(src, point1, point2, [255, 0, 0, 255], 2);
+      }
+  
+      // 8. Show the image with face detection result
+      cv.imshow('canvasOutput', src);
+  
+      // 9. Clean up memory
+      src.delete();
+      gray.delete();
+      faceCascade.delete();
+      faces.delete();
+      msize.delete();
+      utils.delete();
+    } catch (err) {
+      console.error("Error in analyzeFaces:", err);
     }
-
-    analysisResult.textContent += facesAligned 
-        ? " Faces are well positioned!" 
-        : " Faces are not well aligned.";
-
-    // ✅ Free memory
-    src.delete();
-    gray.delete();
-    faces.delete();
-    faceCascade.delete();  // ✅ Fix: Free face detection model memory
-}
+  }
 
 // ** Helper Function: Check if Points Align with Rule of Thirds **
 function checkAlignment(points) {
