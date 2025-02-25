@@ -1,7 +1,7 @@
 const imageUpload = document.getElementById("imageUpload");
 const analyzeBtn = document.getElementById("analyzeBtn");
 const canvas = document.getElementById("imageCanvas");
-const ctx = canvas.getContext("2d", { willReadFrequently: true }); // ✅ Fix: Optimize canvas for frequent reads
+const ctx = canvas.getContext("2d", { willReadFrequently: true }); // ✅ Optimize for frequent reads
 const analysisResult = document.getElementById("analysisResult");
 
 let img = new Image();
@@ -52,106 +52,70 @@ function drawRuleOfThirdsGrid(width, height) {
     ctx.stroke();
 }
 
-// Analyze composition when button is clicked
 analyzeBtn.addEventListener("click", function() {
     if (!img.src) return;
-    
+
     analyzeBrightSpots();
-    analyzeFaces();
-});
 
-// ** 1. Detect Bright Spots **
-function analyzeBrightSpots() {
-    const canvas = document.getElementById("imageCanvas");
-    const ctx = canvas.getContext("2d", { willReadFrequently: true }); // Optimize performance
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    
-    let brightSpots = [];
-
-    for (let i = 0; i < data.length; i += 4) {
-        // Improved perceived brightness formula
-        const brightness = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-
-        if (brightness > 200) { // High brightness threshold
-            const x = (i / 4) % canvas.width;
-            const y = Math.floor((i / 4) / canvas.width);
-            brightSpots.push({ x, y });
-        }
+    if (canvas.width === 0 || canvas.height === 0) {
+        console.error("Canvas is empty! Load an image first.");
+        return;
     }
 
-    const aligned = checkAlignment(brightSpots);
-    analysisResult.textContent = aligned 
-        ? "Bright areas align with rule of thirds!" 
-        : "Bright areas do not align well.";
-}
+    const ctx = canvas.getContext("2d");
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
+    console.log("Image Data:", imageData);
+    if (!imageData || imageData.width === 0 || imageData.height === 0) {
+        console.error("Invalid imageData! Ensure an image is loaded.");
+        return;
+    }
 
+    analyzeFaces(imageData);
+});
+
+// ** Analyze Faces Function (Fixed) **
 async function analyzeFaces(imageData) {
     try {
-        // 1. Convert the image data to a cv.Mat object.
         let src = cv.matFromImageData(imageData);
 
-        // 2. Convert the image to grayscale.
         let gray = new cv.Mat();
         cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 
-        // 3. Check if the grayscale image is empty
-        if (gray.empty()) {
-            throw new Error("Grayscale image is empty."); // throw custom error
-        }
+        if (gray.empty()) throw new Error("Grayscale image is empty.");
 
-        // 4. Check if the image size is valid.
-        if (gray.cols <= 0 || gray.rows <= 0) {
-            throw new Error(`Invalid image dimensions: ${gray.cols} x ${gray.rows}`);
-        }
-
-        // 5. Load the face detection cascade properly
         let faceCascade = new cv.CascadeClassifier();
         let cascadeFile = 'haarcascade_frontalface_default.xml';
 
         await new Promise((resolve, reject) => {
-            cv.FS_createPreloadedFile(
-                "/", cascadeFile, cascadeFile, true, false,
-                () => {
-                    faceCascade.load(cascadeFile);
-                    resolve();
-                },
-                (err) => reject(new Error("Failed to load Haar cascade"))
-            );
+            cv.FS_createPreloadedFile("/", cascadeFile, cascadeFile, true, false, () => {
+                faceCascade.load(cascadeFile);
+                resolve();
+            }, (err) => reject(new Error("Failed to load Haar cascade")));
         });
 
-        // 6. Detect faces in the image.
         let faces = new cv.RectVector();
-        let msize = new cv.Size(30, 30); // Min face size
+        let msize = new cv.Size(30, 30);
         faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, msize, msize);
 
-        // 7. Store detected face positions for rule-of-thirds check
         let facePositions = [];
 
-        // 8. Loop through faces and draw rectangles around them.
         for (let i = 0; i < faces.size(); ++i) {
             let roi = faces.get(i);
             let point1 = new cv.Point(roi.x, roi.y);
             let point2 = new cv.Point(roi.x + roi.width, roi.y + roi.height);
 
-            // Draw rectangle around face
             cv.rectangle(src, point1, point2, [255, 0, 0, 255], 2);
 
-            // Store face center for alignment check
             facePositions.push({ x: roi.x + roi.width / 2, y: roi.y + roi.height / 2 });
         }
 
-        // 9. Check face alignment with rule-of-thirds
         let facesAligned = checkAlignment(facePositions);
         let alignmentMessage = facesAligned ? " Faces are well positioned!" : " Faces are not well aligned.";
 
-        // 10. Display the image with face detection result
         cv.imshow('canvasOutput', src);
         analysisResult.textContent += alignmentMessage;
 
-        // 11. Free memory
         src.delete();
         gray.delete();
         faceCascade.delete();
@@ -162,8 +126,7 @@ async function analyzeFaces(imageData) {
     }
 }
 
-
-// ** Helper Function: Check if Points Align with Rule of Thirds **
+// ** Rule-of-Thirds Check (Fixed) **
 function checkAlignment(points) {
     const thirdsX = [canvas.width / 3, (2 * canvas.width) / 3];
     const thirdsY = [canvas.height / 3, (2 * canvas.height) / 3];
@@ -173,7 +136,6 @@ function checkAlignment(points) {
         thirdsY.some(y => Math.abs(point.y - y) < 20)
     );
 }
-
 
 
 
