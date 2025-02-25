@@ -29,7 +29,7 @@ document.getElementById('analyzeButton').addEventListener('click', function() {
         return;
     }
     if (selectedImage) {
-        processImage(selectedImage);
+        processImage();
     }
 });
 
@@ -37,16 +37,17 @@ function drawImageOnCanvas(img) {
     let canvas = document.getElementById('imageCanvas');
     let ctx = canvas.getContext('2d');
 
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
+    // Set a fixed canvas size for better display
+    canvas.width = 400;
+    canvas.height = (img.height / img.width) * 400; // Maintain aspect ratio
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 }
 
-function processImage(img) {
+function processImage() {
     let canvas = document.getElementById('imageCanvas');
-    let ctx = canvas.getContext('2d');
-
     let src = cv.imread(canvas);
+
     let gray = new cv.Mat();
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
@@ -54,26 +55,31 @@ function processImage(img) {
     let heatmap = generateSaliencyMap(src);
     let brightnessMap = analyzeBrightness(src);
 
-    drawRuleOfThirdsGrid(ctx, img.width, img.height);
+    drawRuleOfThirdsGrid(canvas);
 
-    let confidence = evaluateComposition(keyPoints, heatmap, brightnessMap, img.width, img.height);
+    let confidence = evaluateComposition(keyPoints, heatmap, brightnessMap, canvas.width, canvas.height);
     displayResult(confidence);
 
-    src.delete(); gray.delete();
+    // Cleanup to avoid memory leaks
+    src.delete();
+    gray.delete();
 }
 
 function detectKeyObjects(gray) {
     let faces = new cv.RectVector();
     let classifier = new cv.CascadeClassifier();
-    classifier.load('haarcascade_frontalface_default.xml');
+    classifier.load('haarcascade_frontalface_default.xml'); // Ensure this file is available
 
     classifier.detectMultiScale(gray, faces);
 
     let keyPoints = [];
     for (let i = 0; i < faces.size(); i++) {
         let rect = faces.get(i);
-        keyPoints.push({x: rect.x + rect.width / 2, y: rect.y + rect.height / 2});
+        keyPoints.push({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
     }
+
+    faces.delete();
+    classifier.delete();
     return keyPoints;
 }
 
@@ -87,10 +93,11 @@ function generateSaliencyMap(src) {
         for (let x = 0; x < saliency.cols; x++) {
             let intensity = saliency.ucharAt(y, x);
             if (intensity > 150) {
-                heatmap.push({x, y});
+                heatmap.push({ x, y });
             }
         }
     }
+
     saliency.delete();
     return heatmap;
 }
@@ -102,52 +109,53 @@ function analyzeBrightness(src) {
             let pixel = src.ucharPtr(y, x);
             let brightness = (pixel[0] + pixel[1] + pixel[2]) / 3;
             if (brightness > 200) {
-                brightnessMap.push({x, y});
+                brightnessMap.push({ x, y });
             }
         }
     }
     return brightnessMap;
 }
 
-function drawRuleOfThirdsGrid(ctx, width, height) {
+function drawRuleOfThirdsGrid(canvas) {
+    let ctx = canvas.getContext('2d');
     ctx.strokeStyle = 'red';
     ctx.lineWidth = 1;
 
-    let thirdsX = [width / 3, (2 * width) / 3];
-    let thirdsY = [height / 3, (2 * height) / 3];
+    let thirdsX = [canvas.width / 3, (2 * canvas.width) / 3];
+    let thirdsY = [canvas.height / 3, (2 * canvas.height) / 3];
 
     thirdsX.forEach(x => {
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
+        ctx.lineTo(x, canvas.height);
         ctx.stroke();
     });
 
     thirdsY.forEach(y => {
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
+        ctx.lineTo(canvas.width, y);
         ctx.stroke();
     });
 }
 
 function evaluateComposition(keyPoints, heatmap, brightnessMap, width, height) {
     let gridPoints = [
-        {x: width / 3, y: height / 3}, {x: (2 * width) / 3, y: height / 3},
-        {x: width / 3, y: (2 * height) / 3}, {x: (2 * width) / 3, y: (2 * height) / 3}
+        { x: width / 3, y: height / 3 }, { x: (2 * width) / 3, y: height / 3 },
+        { x: width / 3, y: (2 * height) / 3 }, { x: (2 * width) / 3, y: (2 * height) / 3 }
     ];
 
     let score = 0;
     let threshold = width * 0.1; // 10% of width
 
     function isNearRuleOfThirds(point) {
-        return gridPoints.some(gridPoint => 
+        return gridPoints.some(gridPoint =>
             Math.hypot(point.x - gridPoint.x, point.y - gridPoint.y) < threshold
         );
     }
 
     keyPoints.forEach(point => {
-        if (isNearRuleOfThirds(point)) score += 2; // Higher weight for faces/objects
+        if (isNearRuleOfThirds(point)) score += 2;
     });
 
     heatmap.forEach(point => {
@@ -158,11 +166,11 @@ function evaluateComposition(keyPoints, heatmap, brightnessMap, width, height) {
         if (isNearRuleOfThirds(point)) score += 0.5;
     });
 
-    return Math.min((score / 10) * 100, 100); // Normalize to percentage
+    return Math.min((score / 10) * 100, 100);
 }
 
 function displayResult(confidence) {
-    let resultText = confidence > 70 ? 
+    let resultText = confidence > 70 ?
         `✅ Good composition! (${confidence.toFixed(1)}% confidence)` :
         `⚠️ Consider repositioning elements. (${confidence.toFixed(1)}% confidence)`;
 
