@@ -6,6 +6,13 @@
     <title>Rule of Thirds Checker</title>
     <link rel="stylesheet" href="styles.css">
     <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            cv.onRuntimeInitialized = () => {
+                console.log("OpenCV.js Loaded!");
+            };
+        });
+    </script>
 </head>
 <body>
     <div class="container">
