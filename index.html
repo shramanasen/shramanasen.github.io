@@ -3,25 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rule of Thirds Checker</title>
-    <link rel="stylesheet" href="styles.css">
-    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            cv.onRuntimeInitialized = () => {
-                console.log("OpenCV.js Loaded!");
-            };
-        });
-    </script>
+    <title>Rule of Thirds Analyzer</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Rule of Thirds Checker</h1>
-        <input type="file" id="imageUpload" accept="image/*">
-        <button id="analyzeBtn">Analyze Composition</button>
-        <canvas id="imageCanvas"></canvas>
-        <p id="analysisResult"></p>
-    </div>
+    <h1>Rule of Thirds Composition Analyzer</h1>
+    <input type="file" id="imageUpload" accept="image/*">
+    <button id="analyzeButton" disabled>Analyze Image</button>
+    <canvas id="imageCanvas"></canvas>
+    <p id="analysisResult"></p>
+    <p id="opencvStatus">Loading OpenCV.js...</p>
+
+    <!-- OpenCV.js -->
+    <script async src="https://docs.opencv.org/master/opencv.js" onload="cvLoaded()" onerror="cvFailed()"></script>
     <script src="script.js"></script>
 </body>
 </html>

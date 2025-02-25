@@ -1,165 +1,170 @@
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("Document Loaded. Waiting for OpenCV...");
-    
-    let opencvLoaded = false;
+let selectedImage = null;
+let cvReady = false; // Flag to ensure OpenCV is loaded before processing
 
-    function checkOpenCV() {
-        if (typeof cv !== "undefined" && cv.getBuildInformation) {
-            console.log("✅ OpenCV.js is ready!");
-            opencvLoaded = true;
-            analyzeBtn.disabled = false; // Enable the analyze button
-        } else {
-            console.log("⏳ Waiting for OpenCV...");
-            setTimeout(checkOpenCV, 100);
-        }
-    }
+function cvLoaded() {
+    cvReady = true;
+    document.getElementById('opencvStatus').textContent = "✅ OpenCV.js Loaded!";
+}
 
-    checkOpenCV(); // Start checking for OpenCV
+function cvFailed() {
+    document.getElementById('opencvStatus').textContent = "❌ Failed to load OpenCV.js. Try refreshing the page.";
+}
 
-    const imageUpload = document.getElementById("imageUpload");
-    const analyzeBtn = document.getElementById("analyzeBtn");
-    const canvas = document.getElementById("imageCanvas");
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    const analysisResult = document.getElementById("analysisResult");
+document.getElementById('imageUpload').addEventListener('change', function(event) {
+    let file = event.target.files[0];
+    if (!file) return;
 
     let img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = function () {
+        selectedImage = img;
+        drawImageOnCanvas(img);
+        document.getElementById('analyzeButton').disabled = false;
+    };
+});
 
-    // **Handle Image Upload**
-    imageUpload.addEventListener("change", function(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                img.onload = function() {
-                    drawImageWithGrid();
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+document.getElementById('analyzeButton').addEventListener('click', function() {
+    if (!cvReady) {
+        alert("OpenCV.js is still loading. Please wait...");
+        return;
+    }
+    if (selectedImage) {
+        processImage(selectedImage);
+    }
+});
+
+function drawImageOnCanvas(img) {
+    let canvas = document.getElementById('imageCanvas');
+    let ctx = canvas.getContext('2d');
+
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+}
+
+function processImage(img) {
+    let canvas = document.getElementById('imageCanvas');
+    let ctx = canvas.getContext('2d');
+
+    let src = cv.imread(canvas);
+    let gray = new cv.Mat();
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+    let keyPoints = detectKeyObjects(gray);
+    let heatmap = generateSaliencyMap(src);
+    let brightnessMap = analyzeBrightness(src);
+
+    drawRuleOfThirdsGrid(ctx, img.width, img.height);
+
+    let confidence = evaluateComposition(keyPoints, heatmap, brightnessMap, img.width, img.height);
+    displayResult(confidence);
+
+    src.delete(); gray.delete();
+}
+
+function detectKeyObjects(gray) {
+    let faces = new cv.RectVector();
+    let classifier = new cv.CascadeClassifier();
+    classifier.load('haarcascade_frontalface_default.xml');
+
+    classifier.detectMultiScale(gray, faces);
+
+    let keyPoints = [];
+    for (let i = 0; i < faces.size(); i++) {
+        let rect = faces.get(i);
+        keyPoints.push({x: rect.x + rect.width / 2, y: rect.y + rect.height / 2});
+    }
+    return keyPoints;
+}
+
+function generateSaliencyMap(src) {
+    let saliency = new cv.Mat();
+    let saliencyDetector = new cv.Saliency.StaticSaliencySpectralResidual();
+    saliencyDetector.computeSaliency(src, saliency);
+
+    let heatmap = [];
+    for (let y = 0; y < saliency.rows; y++) {
+        for (let x = 0; x < saliency.cols; x++) {
+            let intensity = saliency.ucharAt(y, x);
+            if (intensity > 150) {
+                heatmap.push({x, y});
+            }
         }
+    }
+    saliency.delete();
+    return heatmap;
+}
+
+function analyzeBrightness(src) {
+    let brightnessMap = [];
+    for (let y = 0; y < src.rows; y++) {
+        for (let x = 0; x < src.cols; x++) {
+            let pixel = src.ucharPtr(y, x);
+            let brightness = (pixel[0] + pixel[1] + pixel[2]) / 3;
+            if (brightness > 200) {
+                brightnessMap.push({x, y});
+            }
+        }
+    }
+    return brightnessMap;
+}
+
+function drawRuleOfThirdsGrid(ctx, width, height) {
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 1;
+
+    let thirdsX = [width / 3, (2 * width) / 3];
+    let thirdsY = [height / 3, (2 * height) / 3];
+
+    thirdsX.forEach(x => {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
     });
 
-    // **Draw Image and Rule of Thirds Grid**
-    function drawImageWithGrid() {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0, img.width, img.height);
-        drawRuleOfThirdsGrid(img.width, img.height);
-    }
-
-    // **Draw Rule of Thirds Grid**
-    function drawRuleOfThirdsGrid(width, height) {
-        ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
-        ctx.lineWidth = 2;
-
-        // Vertical lines
+    thirdsY.forEach(y => {
         ctx.beginPath();
-        ctx.moveTo(width / 3, 0);
-        ctx.lineTo(width / 3, height);
-        ctx.moveTo((2 * width) / 3, 0);
-        ctx.lineTo((2 * width) / 3, height);
-
-        // Horizontal lines
-        ctx.moveTo(0, height / 3);
-        ctx.lineTo(width, height / 3);
-        ctx.moveTo(0, (2 * height) / 3);
-        ctx.lineTo(width, (2 * height) / 3);
-
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
         ctx.stroke();
-    }
+    });
+}
 
-    // **Analyze Bright Spots**
-    function analyzeBrightSpots() {
-        if (!opencvLoaded) {
-            console.error("❌ OpenCV is not loaded yet.");
-            return;
-        }
+function evaluateComposition(keyPoints, heatmap, brightnessMap, width, height) {
+    let gridPoints = [
+        {x: width / 3, y: height / 3}, {x: (2 * width) / 3, y: height / 3},
+        {x: width / 3, y: (2 * height) / 3}, {x: (2 * width) / 3, y: (2 * height) / 3}
+    ];
 
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        let brightSpots = [];
+    let score = 0;
+    let threshold = width * 0.1; // 10% of width
 
-        for (let i = 0; i < data.length; i += 4) {
-            const brightness = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-            if (brightness > 200) {
-                const x = (i / 4) % canvas.width;
-                const y = Math.floor((i / 4) / canvas.width);
-                brightSpots.push({ x, y });
-            }
-        }
-
-        const aligned = checkAlignment(brightSpots);
-        analysisResult.textContent = aligned 
-            ? "Bright areas align with rule of thirds!" 
-            : "Bright areas do not align well.";
-    }
-
-    // **Analyze Faces using OpenCV.js**
-    async function analyzeFaces() {
-        if (!opencvLoaded) {
-            console.error("❌ OpenCV is not loaded yet.");
-            return;
-        }
-
-        try {
-            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            let src = cv.matFromImageData(imageData);
-            let gray = new cv.Mat();
-            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-
-            let faceCascade = new cv.CascadeClassifier();
-            let cascadeFile = 'haarcascade_frontalface_default.xml';
-
-            await new Promise((resolve, reject) => {
-                cv.FS_createPreloadedFile(
-                    "/", cascadeFile, cascadeFile, true, false,
-                    () => {
-                        faceCascade.load(cascadeFile);
-                        resolve();
-                    },
-                    (err) => reject(new Error("Failed to load Haar cascade"))
-                );
-            });
-
-            let faces = new cv.RectVector();
-            let msize = new cv.Size(30, 30);
-            faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, msize, msize);
-
-            let facePositions = [];
-            for (let i = 0; i < faces.size(); ++i) {
-                let roi = faces.get(i);
-                let point1 = new cv.Point(roi.x, roi.y);
-                let point2 = new cv.Point(roi.x + roi.width, roi.y + roi.height);
-                cv.rectangle(src, point1, point2, [255, 0, 0, 255], 2);
-                facePositions.push({ x: roi.x + roi.width / 2, y: roi.y + roi.height / 2 });
-            }
-
-            let facesAligned = checkAlignment(facePositions);
-            analysisResult.textContent += facesAligned ? " Faces are well positioned!" : " Faces are not well aligned.";
-
-            cv.imshow('canvasOutput', src);
-            src.delete(); gray.delete(); faceCascade.delete(); faces.delete(); msize.delete();
-        } catch (err) {
-            console.error("Error in analyzeFaces:", err);
-        }
-    }
-
-    // **Check Rule of Thirds Alignment**
-    function checkAlignment(points) {
-        const thirdsX = [canvas.width / 3, (2 * canvas.width) / 3];
-        const thirdsY = [canvas.height / 3, (2 * canvas.height) / 3];
-
-        return points.some(point =>
-            thirdsX.some(x => Math.abs(point.x - x) < 20) &&
-            thirdsY.some(y => Math.abs(point.y - y) < 20)
+    function isNearRuleOfThirds(point) {
+        return gridPoints.some(gridPoint => 
+            Math.hypot(point.x - gridPoint.x, point.y - gridPoint.y) < threshold
         );
     }
 
-    // **Analyze Image When Button is Clicked**
-    analyzeBtn.addEventListener("click", function() {
-        if (!img.src) return;
-        analyzeBrightSpots();
-        analyzeFaces();
+    keyPoints.forEach(point => {
+        if (isNearRuleOfThirds(point)) score += 2; // Higher weight for faces/objects
     });
 
-});
+    heatmap.forEach(point => {
+        if (isNearRuleOfThirds(point)) score += 1;
+    });
+
+    brightnessMap.forEach(point => {
+        if (isNearRuleOfThirds(point)) score += 0.5;
+    });
+
+    return Math.min((score / 10) * 100, 100); // Normalize to percentage
+}
+
+function displayResult(confidence) {
+    let resultText = confidence > 70 ? 
+        `✅ Good composition! (${confidence.toFixed(1)}% confidence)` :
+        `⚠️ Consider repositioning elements. (${confidence.toFixed(1)}% confidence)`;
+
+    document.getElementById('analysisResult').textContent = resultText;
+}
