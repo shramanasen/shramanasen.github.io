@@ -5,6 +5,13 @@ const ctx = canvas.getContext("2d", { willReadFrequently: true });
 const analysisResult = document.getElementById("analysisResult");
 
 let img = new Image();
+let opencvLoaded = false;
+
+// **Ensure OpenCV is Fully Loaded**
+cv.onRuntimeInitialized = () => {
+    console.log("OpenCV.js Loaded!");
+    opencvLoaded = true;
+};
 
 // **Handle Image Upload**
 imageUpload.addEventListener("change", function(event) {
@@ -34,14 +41,11 @@ function drawRuleOfThirdsGrid(width, height) {
     ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
     ctx.lineWidth = 2;
 
-    // Vertical lines
     ctx.beginPath();
     ctx.moveTo(width / 3, 0);
     ctx.lineTo(width / 3, height);
     ctx.moveTo((2 * width) / 3, 0);
     ctx.lineTo((2 * width) / 3, height);
-
-    // Horizontal lines
     ctx.moveTo(0, height / 3);
     ctx.lineTo(width, height / 3);
     ctx.moveTo(0, (2 * height) / 3);
@@ -66,13 +70,18 @@ function analyzeBrightSpots() {
     }
 
     const aligned = checkAlignment(brightSpots);
-    analysisResult.textContent = aligned 
-        ? "Bright areas align with rule of thirds!" 
+    analysisResult.textContent = aligned
+        ? "Bright areas align with rule of thirds!"
         : "Bright areas do not align well.";
 }
 
 // **Analyze Faces using OpenCV.js**
 async function analyzeFaces() {
+    if (!opencvLoaded) {
+        console.error("OpenCV is not loaded yet.");
+        return;
+    }
+
     try {
         let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         let src = cv.matFromImageData(imageData);
@@ -82,9 +91,11 @@ async function analyzeFaces() {
         let faceCascade = new cv.CascadeClassifier();
         let cascadeFile = 'haarcascade_frontalface_default.xml';
 
+        // Load the Haarcascade file from GitHub Pages
         await new Promise((resolve, reject) => {
             cv.FS_createPreloadedFile(
-                "/", cascadeFile, cascadeFile, true, false,
+                "/", cascadeFile, "https://shramanasen.github.io/haarcascade_frontalface_default.xml",
+                true, false,
                 () => {
                     faceCascade.load(cascadeFile);
                     resolve();
@@ -109,7 +120,9 @@ async function analyzeFaces() {
         let facesAligned = checkAlignment(facePositions);
         analysisResult.textContent += facesAligned ? " Faces are well positioned!" : " Faces are not well aligned.";
 
-        cv.imshow('canvasOutput', src);
+        // **Fixed canvas issue in cv.imshow()**
+        cv.imshow(canvas, src);
+
         src.delete(); gray.delete(); faceCascade.delete(); faces.delete(); msize.delete();
     } catch (err) {
         console.error("Error in analyzeFaces:", err);
