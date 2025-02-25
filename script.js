@@ -6,6 +6,7 @@ const analysisResult = document.getElementById("analysisResult");
 
 let img = new Image();
 
+// **Handle Image Upload**
 imageUpload.addEventListener("change", function(event) {
     const file = event.target.files[0];
     if (file) {
@@ -20,6 +21,7 @@ imageUpload.addEventListener("change", function(event) {
     }
 });
 
+// **Draw Image and Rule of Thirds Grid**
 function drawImageWithGrid() {
     canvas.width = img.width;
     canvas.height = img.height;
@@ -27,23 +29,28 @@ function drawImageWithGrid() {
     drawRuleOfThirdsGrid(img.width, img.height);
 }
 
+// **Draw Rule of Thirds Grid**
 function drawRuleOfThirdsGrid(width, height) {
     ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
     ctx.lineWidth = 2;
 
+    // Vertical lines
     ctx.beginPath();
     ctx.moveTo(width / 3, 0);
     ctx.lineTo(width / 3, height);
     ctx.moveTo((2 * width) / 3, 0);
     ctx.lineTo((2 * width) / 3, height);
+
+    // Horizontal lines
     ctx.moveTo(0, height / 3);
     ctx.lineTo(width, height / 3);
     ctx.moveTo(0, (2 * height) / 3);
     ctx.lineTo(width, (2 * height) / 3);
+
     ctx.stroke();
 }
 
-// ✅ Make sure this function is defined before it is used
+// **Analyze Bright Spots**
 function analyzeBrightSpots() {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
@@ -64,7 +71,7 @@ function analyzeBrightSpots() {
         : "Bright areas do not align well.";
 }
 
-// ✅ Ensure `analyzeFaces` is correctly defined
+// **Analyze Faces using OpenCV.js**
 async function analyzeFaces() {
     try {
         let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -109,7 +116,7 @@ async function analyzeFaces() {
     }
 }
 
-// ✅ Ensure `checkAlignment` function is correctly defined
+// **Check Rule of Thirds Alignment**
 function checkAlignment(points) {
     const thirdsX = [canvas.width / 3, (2 * canvas.width) / 3];
     const thirdsY = [canvas.height / 3, (2 * canvas.height) / 3];
@@ -120,7 +127,7 @@ function checkAlignment(points) {
     );
 }
 
-// ✅ Make sure the click event handler comes AFTER function definitions
+// **Analyze Image When Button is Clicked**
 analyzeBtn.addEventListener("click", function() {
     if (!img.src) return;
     analyzeBrightSpots();
