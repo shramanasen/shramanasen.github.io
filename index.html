@@ -4,24 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rule of Thirds Analyzer</title>
-    <link rel="stylesheet" href="style.css">
-    <script async src="https://docs.opencv.org/master/opencv.js" onload="onOpenCVReady()"></script>
+    <link rel="stylesheet" href="styles.css">
+    <script async src="https://docs.opencv.org/4.5.1/opencv.js" onload="cvLoaded()" onerror="cvFailed()"></script>
 </head>
 <body>
     <div class="container">
         <h1>Rule of Thirds Image Analyzer</h1>
         <input type="file" id="imageUpload" accept="image/*">
-        <div class="image-container">
-            <canvas id="canvas"></canvas>
-        </div>
-        <button id="analyzeButton">Analyze Image</button>
-        <p id="result"></p>
+        <p id="opencvStatus">Loading OpenCV.js...</p>
+        <button id="analyzeButton" disabled>Analyze</button>
+        <canvas id="imageCanvas"></canvas>
+        <p id="analysisResult"></p>
     </div>
-    <script>
-        function onOpenCVReady() {
-            console.log("OpenCV.js is ready!");
-        }
-    </script>
     <script src="script.js"></script>
 </body>
 </html>
