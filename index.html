@@ -5,17 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rule of Thirds Analyzer</title>
     <link rel="stylesheet" href="styles.css">
-    <script async src="https://docs.opencv.org/4.5.1/opencv.js" onload="cvLoaded()" onerror="cvFailed()"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Rule of Thirds Image Analyzer</h1>
-        <input type="file" id="imageUpload" accept="image/*">
-        <p id="opencvStatus">Loading OpenCV.js...</p>
-        <button id="analyzeButton" disabled>Analyze</button>
-        <canvas id="imageCanvas"></canvas>
-        <p id="analysisResult"></p>
-    </div>
-    <script src="script.js"></script>
+    <h1>Rule of Thirds Composition Analyzer</h1>
+    <input type="file" id="imageInput" accept="image/*">
+    <canvas id="imageCanvas"></canvas>
+    <button id="heatmapButton">Analyze Heatmap</button>
+    <button id="faceObjectButton">Analyze Faces & Objects</button>
+    <button id="brightnessContrastButton">Analyze Brightness & Contrast</button>
+    <button id="evaluateAllButton">Evaluate All</button>
+    
+    <script src="styles.css"></script>
+    <script src="heatmapAnalysis.js"></script>
+    <script src="faceObjectDetection.js"></script>
+    <script src="brightnessContrast.js"></script>
+    <script src="evaluation.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
