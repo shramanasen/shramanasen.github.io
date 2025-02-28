@@ -27,8 +27,8 @@ document.getElementById('faceObjectButton').addEventListener('click', async func
     let objectCascade = new cv.CascadeClassifier();
 
     // Load Haar cascades (Ensure they are hosted properly)
-    let faceCascadeFile = 'https://github.com/shramanasen/shramanasen.github.io/blob/main/haarcascade_frontalface_default.xml';
-    let objectCascadeFile = 'https://github.com/shramanasen/shramanasen.github.io/blob/main/haarcascade_fullbody.xml';
+    let faceCascadeFile = 'https://shramanasen.github.io/haarcascade_frontalface_default.xml';
+    let objectCascadeFile = 'https://shramanasen.github.io/haarcascade_fullbody.xml';
 
     try {
         faceCascade.load(faceCascadeFile);
