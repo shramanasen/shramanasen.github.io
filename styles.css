@@ -1,0 +1,33 @@
+body {
+    font-family: Arial, sans-serif; /* Sets the font */
+    text-align: center; /* Centers all text */
+    margin: 20px; /* Adds space around the page */
+    background-color: #f4f4f4; /* Sets background color */
+}
+
+h1 {
+    color: #333; /* Dark grey color for the title */
+}
+
+input {
+    margin: 10px 0; /* Adds spacing around the file input */
+}
+
+canvas {
+    display: block; /* Ensures the canvas appears as a block */
+    margin: 20px auto; /* Centers the canvas */
+    border: 2px solid #333; /* Adds a border */
+}
+
+button {
+    margin: 5px; /* Adds spacing between buttons */
+    padding: 10px 15px; /* Adds padding inside buttons */
+    background-color: #007bff; /* Blue background */
+    color: white; /* White text */
+    border: none; /* Removes button border */
+    cursor: pointer; /* Changes cursor to pointer on hover */
+}
+
+button:hover {
+    background-color: #0056b3; /* Darker blue when hovered */
+}
