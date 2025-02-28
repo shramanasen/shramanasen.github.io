@@ -15,10 +15,8 @@ document.getElementById('faceObjectButton').addEventListener('click', async func
         return;
     }
 
-    // Convert canvas to image element
-    let imageElement = document.createElement('img');
-    imageElement.src = canvas.toDataURL();
-    let src = cv.imread(imageElement);
+    // ✅ Read image directly from the canvas
+    let src = cv.imread(canvas);
 
     let gray = new cv.Mat();
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
