@@ -1,29 +1,20 @@
-console.log("Starting to read Object Face Detection");
+console.log("faceObjectDetection.js loaded");
 
-document.addEventListener("DOMContentLoaded", function () {
-    // This event listener waits until the HTML document has been fully loaded and parsed.
-    
+function initFaceObjectDetection() {
     if (typeof cv === 'undefined') {
-        // Check if the global cv object (from OpenCV.js) is defined.
         console.error("OpenCV.js is not loaded. Check your script reference.");
-        return; // Stop execution if OpenCV.js isn't loaded.
+        return;
     }
     
     cv['onRuntimeInitialized'] = function () {
-        // This function is called when OpenCV.js has finished its asynchronous initialization.
         console.log("OpenCV.js is ready!");
-        
-        // Enable the "Analyze Faces & Objects" button once OpenCV is ready.
         document.getElementById('faceObjectButton').disabled = false;
         
-        // Attach a click event listener to the "Analyze Faces & Objects" button.
         document.getElementById('faceObjectButton').addEventListener('click', function() {
-            // Get the canvas element and its drawing context.
             const canvas = document.getElementById('imageCanvas');
             const ctx = canvas.getContext('2d');
     
             if (!canvas || !ctx) {
-                // If the canvas or context isn’t available, alert the user.
                 alert("Please upload an image first.");
                 return;
             }
@@ -52,7 +43,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log("Face cascade loaded:", faceLoaded);
                 console.log("Object cascade loaded:", objectLoaded);
             } catch (error) {
-                // If loading fails, log the error, alert the user, and clean up memory.
                 console.error("Failed to load XML files:", error);
                 alert("Error loading face/object detection models.");
                 src.delete();
@@ -71,7 +61,6 @@ document.addEventListener("DOMContentLoaded", function () {
             // Run full-body detection on the grayscale image.
             objectCascade.detectMultiScale(gray, objects, 1.1, 3, 0, minSize, new cv.Size());
     
-            // Log how many faces and objects were detected.
             console.log("Number of faces detected:", faces.size());
             console.log("Number of objects detected:", objects.size());
     
@@ -140,4 +129,10 @@ document.addEventListener("DOMContentLoaded", function () {
             objects.delete();
         });
     };
-});
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initFaceObjectDetection);
+} else {
+    initFaceObjectDetection();
+}
