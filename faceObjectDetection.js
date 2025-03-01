@@ -6,6 +6,7 @@ function initFaceObjectDetection() {
         return;
     }
     
+    console.log("onruntimeinitialised");
     cv['onRuntimeInitialized'] = function () {
         console.log("OpenCV.js is ready!");
         document.getElementById('faceObjectButton').disabled = false;
