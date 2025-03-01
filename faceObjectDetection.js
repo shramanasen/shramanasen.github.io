@@ -1,3 +1,5 @@
+console.log("Starting to read Object Face Detection");
+
 document.addEventListener("DOMContentLoaded", function () {
     // This event listener waits until the HTML document has been fully loaded and parsed.
     
