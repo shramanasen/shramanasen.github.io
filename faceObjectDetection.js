@@ -133,7 +133,9 @@ function initFaceObjectDetection() {
 }
 
 if (document.readyState === "loading") {
+    console.log("not working");
     document.addEventListener("DOMContentLoaded", initFaceObjectDetection);
 } else {
+    console.log("not working");
     initFaceObjectDetection();
 }
