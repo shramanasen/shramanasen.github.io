@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log("OpenCV.js is ready!");
         document.getElementById('faceObjectButton').disabled = false; // Enable button after OpenCV loads
         
-        document.getElementById('faceObjectButton').addEventListener('click', async function() {
+        document.getElementById('faceObjectButton').addEventListener('click', function() {
             const canvas = document.getElementById('imageCanvas');
             const ctx = canvas.getContext('2d');
     
@@ -19,13 +19,16 @@ document.addEventListener("DOMContentLoaded", function () {
     
             console.log("Face & Object detection using OpenCV started...");
     
-            let src = cv.imread(canvas); // Read image from canvas
+            // Read image from canvas and convert it to grayscale.
+            let src = cv.imread(canvas);
             let gray = new cv.Mat();
             cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
     
+            // Create cascade classifiers for face and object detection.
             let faceCascade = new cv.CascadeClassifier();
             let objectCascade = new cv.CascadeClassifier();
     
+            // Specify XML files for the cascade classifiers.
             let faceCascadeFile = 'haarcascade_frontalface_default.xml';
             let objectCascadeFile = 'haarcascade_fullbody.xml';
     
@@ -35,53 +38,64 @@ document.addEventListener("DOMContentLoaded", function () {
             } catch (error) {
                 console.error("Failed to load XML files:", error);
                 alert("Error loading face/object detection models.");
+                src.delete();
+                gray.delete();
                 return;
             }
     
+            // Detect faces and objects.
             let faces = new cv.RectVector();
             let objects = new cv.RectVector();
-            let msize = new cv.Size(100, 100);
+            let minSize = new cv.Size(100, 100);
+            faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, minSize, new cv.Size());
+            objectCascade.detectMultiScale(gray, objects, 1.1, 3, 0, minSize, new cv.Size());
     
-            faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, msize, new cv.Size());
-            objectCascade.detectMultiScale(gray, objects, 1.1, 3, 0, msize, new cv.Size());
-    
+            // Determine grid positions for the rule of thirds.
             let imgWidth = canvas.width;
             let imgHeight = canvas.height;
-            let gridSpacingX = imgWidth / 3;
-            let gridSpacingY = imgHeight / 3;
+            let gridX1 = imgWidth / 3;
+            let gridX2 = (imgWidth * 2) / 3;
+            let gridY1 = imgHeight / 3;
+            let gridY2 = (imgHeight * 2) / 3;
             let tolerance = 0.06 * Math.min(imgWidth, imgHeight);
     
-            let prioritized = [];
+            // Gather detected regions and prioritize faces.
+            let detections = [];
             for (let i = 0; i < faces.size(); i++) {
                 let face = faces.get(i);
-                prioritized.push({ x: face.x, y: face.y, width: face.width, height: face.height, type: 'face' });
+                detections.push({x: face.x, y: face.y, width: face.width, height: face.height, type: 'face'});
             }
     
             for (let i = 0; i < objects.size(); i++) {
                 let object = objects.get(i);
-                prioritized.push({ x: object.x, y: object.y, width: object.width, height: object.height, type: 'object' });
+                detections.push({x: object.x, y: object.y, width: object.width, height: object.height, type: 'object'});
             }
     
-            prioritized.sort((a, b) => (a.type === 'face' ? -1 : 1));
+            // Prioritize faces over objects.
+            detections.sort((a, b) => a.type === 'face' ? -1 : 1);
     
+            // Check each detection against the rule-of-thirds grid.
             let matchFound = false;
-            prioritized.forEach((obj) => {
-                let centerX = obj.x + obj.width / 2;
-                let centerY = obj.y + obj.height / 2;
+            detections.forEach(function(item) {
+                let centerX = item.x + item.width / 2;
+                let centerY = item.y + item.height / 2;
     
-                let nearGridX = [gridSpacingX, gridSpacingX * 2].some(pos => Math.abs(centerX - pos) <= tolerance);
-                let nearGridY = [gridSpacingY, gridSpacingY * 2].some(pos => Math.abs(centerY - pos) <= tolerance);
+                // Check if the center is near any vertical or horizontal grid line.
+                let nearVertical = Math.abs(centerX - gridX1) <= tolerance || Math.abs(centerX - gridX2) <= tolerance;
+                let nearHorizontal = Math.abs(centerY - gridY1) <= tolerance || Math.abs(centerY - gridY2) <= tolerance;
     
-                if (nearGridX && nearGridY) {
-                    ctx.strokeStyle = obj.type === 'face' ? 'red' : 'blue';
+                if (nearVertical || nearHorizontal) {
+                    // Draw a rectangle: red for faces, blue for objects.
+                    ctx.strokeStyle = item.type === 'face' ? 'red' : 'blue';
                     ctx.lineWidth = 3;
-                    ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
+                    ctx.strokeRect(item.x, item.y, item.width, item.height);
                     matchFound = true;
                 }
             });
     
             alert(matchFound ? "Faces/Objects align with Rule of Thirds!" : "No significant alignment found.");
     
+            // Free memory.
             src.delete();
             gray.delete();
             faces.delete();
