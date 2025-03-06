@@ -50,6 +50,7 @@ function initFaceObjectDetection() {
             // Initialize classifiers.
             let faceCascade = new cv.CascadeClassifier();
             let objectCascade = new cv.CascadeClassifier();
+            // Use filenames for XML cascades located in the same directory.
             let faceCascadeFile = 'haarcascade_frontalface_default.xml';
             let objectCascadeFile = 'haarcascade_fullbody.xml';
     
