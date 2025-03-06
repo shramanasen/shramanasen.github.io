@@ -1,6 +1,7 @@
 document.getElementById('brightnessContrastButton').addEventListener('click', function() {
     const canvas = document.getElementById('imageCanvas');
-    const ctx = canvas.getContext('2d');
+    // Use willReadFrequently to improve performance when reading canvas pixel data frequently.
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     
     if (!canvas || !ctx) {
         alert("Please upload an image first.");
@@ -68,7 +69,11 @@ document.getElementById('brightnessContrastButton').addEventListener('click', fu
     cv.imshow(canvas, output);
     
     // Cleanup memory
-    src.delete(); gray.delete(); edges.delete(); lines.delete(); output.delete();
+    src.delete();
+    gray.delete();
+    edges.delete();
+    lines.delete();
+    output.delete();
     
     // Provide feedback based on rule-of-thirds alignment detection
     if (linesAligned > 0) {
